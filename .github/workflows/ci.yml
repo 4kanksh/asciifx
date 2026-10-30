@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Tests (Windows PowerShell 5.1)
         shell: powershell
@@ -21,7 +21,7 @@ jobs:
   lint:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: PSScriptAnalyzer
         shell: pwsh
