@@ -1,0 +1,23 @@
+name: Publish
+
+# Push a tag like v1.0.1 (matching ModuleVersion in AsciiFX.psd1) to publish to the PowerShell Gallery.
+# Needs the repository secret PSGALLERY_API_KEY.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tests
+        shell: pwsh
+        run: ./tests/Run-Tests.ps1
+
+      - name: Publish to the PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: ./tools/Publish.ps1

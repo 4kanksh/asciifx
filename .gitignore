@@ -1,0 +1,3 @@
+# Compiled animations are cached in %LOCALAPPDATA%\AsciiFX, never in the repository
+*.dll
+*.pdb
