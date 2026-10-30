@@ -41,8 +41,13 @@ $module = Import-Module (Join-Path $root 'AsciiFX.psd1') -Force -DisableNameChec
 $isWindowsHost = $PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows
 
 Test-Case 'core and animations compile' { & $module { Initialize-AsciiFX }; [bool]('AsciiFX.IAnimation' -as [type]) }
-if ($isWindowsHost) {
+# The desktop window always runs in Windows PowerShell 5.1, whichever PowerShell starts it
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
     Test-Case 'desktop player compiles' { & $module { Initialize-AsciiFX -Desktop }; [bool]('AsciiFX.DesktopPlayer' -as [type]) }
+} elseif ($isWindowsHost) {
+    Test-Case 'Windows PowerShell 5.1 is there to run desktop animations' {
+        Test-Path (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe')
+    }
 }
 Test-Case 'manifest exports every command (run tools/Update-Manifest.ps1 if not)' { & (Join-Path $root 'tools/Update-Manifest.ps1') -Check }
 Test-Case 'asciifx lists every animation' {

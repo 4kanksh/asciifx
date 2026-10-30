@@ -55,14 +55,10 @@ function Initialize-AsciiFX([switch]$Desktop) {
         $dll = Get-CompiledAssembly 'AsciiFX.Animations' $sources
         if (-not ('AsciiFX.IAnimation' -as [type])) { Add-Type -Path $dll }
     }
+    # The desktop window always runs in Windows PowerShell 5.1 (see Invoke-DesktopAnimation)
     if ($Desktop -and -not ('AsciiFX.DesktopPlayer' -as [type])) {
         Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-        # PowerShell 7 also needs the libraries Windows Forms builds on named explicitly
-        $winForms = if ($PSVersionTable.PSEdition -eq 'Core') {
-            [System.Windows.Forms.Form], [System.Drawing.Graphics], [System.Drawing.Rectangle], [System.ComponentModel.Component] |
-                ForEach-Object { $_.Assembly.Location } | Select-Object -Unique
-        } else { 'System.Windows.Forms', 'System.Drawing' }
-        $references = @([AsciiFX.IAnimation].Assembly.Location) + $winForms
+        $references = @([AsciiFX.IAnimation].Assembly.Location, 'System.Windows.Forms', 'System.Drawing')
         $dll = Get-CompiledAssembly 'AsciiFX.Desktop' @(Join-Path $PSScriptRoot 'core/AsciiFX.Desktop.cs') $references
         if (-not ('AsciiFX.DesktopPlayer' -as [type])) { Add-Type -Path $dll }
     }
@@ -134,9 +130,9 @@ function Invoke-DesktopAnimation([string]$Name, [Collections.IDictionary]$Bound)
     $encoded = ($options.GetEnumerator() | Where-Object { $_.Key -in $own -or $animation.Desktop.Options.Keys -contains $_.Key } |
         ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ';'
 
-    # Launched through WMI, so it keeps running after the terminal that started it closes
-    $exe = (Get-Process -Id $PID).Path
-    if ($exe -notmatch '(powershell|pwsh)\.exe$') { $exe = 'powershell.exe' }
+    # Launched through WMI, so it keeps running after the terminal that started it closes. It always uses the
+    # Windows PowerShell 5.1 built into Windows, where Windows Forms compiles without extra setup, even from PowerShell 7.
+    $exe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $hostScript = Join-Path $PSScriptRoot 'core/desktop-host.ps1'
     $hidden = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
     $null = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{

@@ -250,6 +250,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full walkthrough.
 - `AsciiFX.psm1` reads the manifests and generates the `<name>` and `desktop-<name>` commands from them.
 - `core/AsciiFX.Core.cs` has the terminal player (full-screen with escape codes); `core/AsciiFX.Desktop.cs` has the
   desktop player: a borderless, click-through window with a see-through background, kept just above the desktop layer.
+  Each desktop animation runs as its own hidden Windows PowerShell 5.1 process (built into Windows), even when started from PowerShell 7.
 - The C# is compiled on first use and cached by a hash of the source, so it stays readable here and fast when you run it.
 
 ## Credits
