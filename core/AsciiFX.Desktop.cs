@@ -37,7 +37,7 @@ namespace AsciiFX
         int ticks;
 
         // layout "box": a cols x rows window placed by position/x/y.
-        // layout "sky": the full screen width and the top heightPercent of the screen.
+        // layout "sky": the full screen width and the top heightPercent of the screen (100 = all of it).
         public static void Run(IAnimation anim, string name, float fontSize, string layout, int cols, int rows,
                                int heightPercent, bool outline, string position, int x, int y)
         {
@@ -58,8 +58,8 @@ namespace AsciiFX
             {
                 Rectangle screen = Screen.PrimaryScreen.Bounds;
                 cols = (int)((screen.Width - 4) / cellW);
-                rows = (int)(screen.Height * heightPercent / 100.0 / cellH);
-                position = "top-left"; x = 0; y = 0;
+                rows = (int)(screen.Height * Math.Max(1, Math.Min(100, heightPercent)) / 100.0 / cellH);
+                position = "sky";
             }
             Application.Run(new DesktopPlayer(anim, name, font, cellW, cellH, cols, rows, outline, position, x, y));
         }
@@ -86,7 +86,9 @@ namespace AsciiFX
             outlineBrush = new SolidBrush(Color.FromArgb(17, 17, 27));
 
             ClientSize = new Size((int)(this.cols * cellW) + 4, (int)(this.rows * cellH) + 4);
-            Location = PlaceOn(Screen.PrimaryScreen.WorkingArea, position, x, y);
+            // The sky starts at the very top of the screen, so at 100% it covers all of it
+            Location = position == "sky" ? Screen.PrimaryScreen.Bounds.Location
+                                         : PlaceOn(Screen.PrimaryScreen.WorkingArea, position, x, y);
 
             Timer timer = new Timer();
             timer.Interval = Math.Max(15, anim.FrameMs);

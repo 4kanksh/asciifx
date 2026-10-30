@@ -159,18 +159,23 @@ function Start-DesktopWindow([string]$Name, [string]$Encoded, [int]$FontSize, [s
 #region Commands
 
 function Format-Default($Value) {
-    if ($Value -is [string]) { "'$Value'" } else { [string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0}', $Value) }
+    if ($Value -is [string]) { "'$Value'" }
+    elseif ($Value -is [bool]) { "`$$Value" }
+    else { [string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0}', $Value) }
 }
 
-# Builds the source of `<name>` (Mode terminal) or `desktop-<name>` (Mode desktop) from a manifest, help included
-function New-CommandText($Animation, [string]$Mode) {
+# Builds the source of `<name>` (Mode terminal) or `desktop-<name>` (Mode desktop) from a manifest, help included.
+# A variant (from the manifest's Variants list) is the same animation under its own command name with other defaults.
+function New-CommandText($Animation, [string]$Mode, $Variant) {
     $name = $Animation.Name
-    $command = if ($Mode -eq 'desktop') { "desktop-$name" } else { $name }
+    $command = if ($Variant) { $Variant.Command } elseif ($Mode -eq 'desktop') { "desktop-$name" } else { $name }
+    $description = if ($Variant) { $Variant.Description } else { $Animation.Description }
+    $defaults = if ($Variant -and $Variant.Defaults) { $Variant.Defaults } else { @{} }
     $params = New-Object Collections.Generic.List[string]
     $help = New-Object Collections.Generic.List[string]
 
     $help.Add('.SYNOPSIS')
-    $help.Add($(if ($Mode -eq 'desktop') { "$($Animation.Description), on the desktop." } else { "$($Animation.Description), in the terminal." }))
+    $help.Add($(if ($Mode -eq 'desktop') { "$description, on the desktop." } else { "$description, in the terminal." }))
     $help.Add('.DESCRIPTION')
     $help.Add($(if ($Mode -eq 'desktop') {
         'Shows the animation on the desktop: above the wallpaper, behind your windows, and click-through. ' +
@@ -199,21 +204,29 @@ function New-CommandText($Animation, [string]$Mode) {
     foreach ($o in $Animation.Options) {
         $where = if ($o.Where) { $o.Where } else { 'both' }
         if ($where -ne 'both' -and $where -ne $Mode) { continue }
-        $params.Add($(if ($o.Type -eq 'switch') { "[switch]`$$($o.Name)" } else { "[$($o.Type)]`$$($o.Name) = $(Format-Default $o.Default)" }))
+        $default = if ($defaults.ContainsKey($o.Name)) { $defaults[$o.Name] } else { $o.Default }
+        $params.Add($(if ($o.Type -eq 'switch') { "[switch]`$$($o.Name)" } else { "[$($o.Type)]`$$($o.Name) = $(Format-Default $default)" }))
         $help.Add(".PARAMETER $($o.Name)")
-        $help.Add($(if ($o.Type -eq 'switch') { $o.Help } else { "$($o.Help). Default: $($o.Default)" }))
+        $help.Add($(if ($o.Type -eq 'switch') { $o.Help } else { "$($o.Help). Default: $default" }))
     }
 
     $help.Add('.EXAMPLE')
     $help.Add($(if ($Animation.Palettes) { "$command $($Animation.Palettes[-1])" } else { $command }))
     $invoke = if ($Mode -eq 'desktop') { 'Invoke-DesktopAnimation' } else { 'Invoke-TerminalAnimation' }
-    "function $command {`n<#`n$($help -join "`n")`n#>`nparam(`n    $($params -join ",`n    ")`n)`n$invoke '$name' `$PSBoundParameters`n}"
+    # The variant's defaults first, then whatever was typed
+    $preset = ($defaults.Keys | ForEach-Object { "$_ = $(Format-Default $defaults[$_])" }) -join '; '
+    $body = "`$bound = @{ $preset }`nforeach (`$key in `$PSBoundParameters.Keys) { `$bound[`$key] = `$PSBoundParameters[`$key] }`n$invoke '$name' `$bound"
+    "function $command {`n<#`n$($help -join "`n")`n#>`nparam(`n    $($params -join ",`n    ")`n)`n$body`n}"
 }
 
 $script:Commands = foreach ($animation in $script:Animations.Values) {
     foreach ($mode in 'terminal', 'desktop') {
         . ([scriptblock]::Create((New-CommandText $animation $mode)))
         if ($mode -eq 'desktop') { "desktop-$($animation.Name)" } else { $animation.Name }
+    }
+    foreach ($variant in $animation.Variants) {
+        . ([scriptblock]::Create((New-CommandText $animation $variant.Mode $variant)))
+        $variant.Command
     }
 }
 
@@ -224,10 +237,12 @@ function asciifx {
     #>
     $script:Animations.Values | ForEach-Object {
         $name = $_.Name
+        $variants = @($_.Variants)
         [pscustomobject]@{
             Animation   = $name
-            Terminal    = (@($name) + @($_.Palettes | Select-Object -Skip 1 | ForEach-Object { "$name $_" })) -join ', '
-            Desktop     = "desktop-$name"
+            Terminal    = (@($name) + @($_.Palettes | Select-Object -Skip 1 | ForEach-Object { "$name $_" }) +
+                           @($variants | Where-Object { $_.Mode -eq 'terminal' } | ForEach-Object Command)) -join ', '
+            Desktop     = (@("desktop-$name") + @($variants | Where-Object { $_.Mode -eq 'desktop' } | ForEach-Object Command)) -join ', '
             Description = $_.Description
         }
     } | Format-Table -AutoSize -Wrap

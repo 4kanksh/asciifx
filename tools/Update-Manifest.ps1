@@ -7,10 +7,15 @@ param([switch]$Check)
 
 $root = Split-Path $PSScriptRoot
 $manifestPath = Join-Path $root 'AsciiFX.psd1'
-$names = Get-ChildItem (Join-Path $root 'animations') -Directory | Where-Object Name -NotLike '_*' | Sort-Object Name |
-    ForEach-Object { (Import-PowerShellDataFile (Join-Path $_.FullName "$($_.Name).psd1")).Name }
+$animations = Get-ChildItem (Join-Path $root 'animations') -Directory | Where-Object Name -NotLike '_*' | Sort-Object Name |
+    ForEach-Object { Import-PowerShellDataFile (Join-Path $_.FullName "$($_.Name).psd1") }
+$names = $animations | ForEach-Object Name
 
-$lines = @("        'asciifx', 'desktop-clear'") + @($names | ForEach-Object { "        '$_', 'desktop-$_'" })
+# One line per animation: its two commands, then any variant commands
+$lines = @("        'asciifx', 'desktop-clear'") + @($animations | ForEach-Object {
+    $commands = @($_.Name, "desktop-$($_.Name)") + @($_.Variants | ForEach-Object Command)
+    '        ' + (($commands | ForEach-Object { "'$_'" }) -join ', ')
+})
 $block = "FunctionsToExport = @(`n" + ($lines -join ",`n") + "`n    )"
 
 $text = [IO.File]::ReadAllText($manifestPath) -replace "`r`n", "`n"

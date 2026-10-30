@@ -64,6 +64,19 @@ foreach ($name in & $module { $script:Animations.Keys }) {
     Test-Case "${name}: every option has a name, type and help" {
         foreach ($o in $animation.Options) { $o.Name -and $o.Type -in 'int', 'double', 'string', 'switch' -and $o.Help }
     }
+    foreach ($variant in $animation.Variants) {
+        Test-Case "${name}: variant $($variant.Command) has its command and only known options" {
+            [bool](Get-Command $variant.Command -Module AsciiFX -ErrorAction SilentlyContinue)
+            $variant.Mode -in 'terminal', 'desktop'
+            $known = @($animation.Options | ForEach-Object Name)
+            foreach ($key in $variant.Defaults.Keys) { $key -in $known }
+        }
+        Test-Case "${name}: variant $($variant.Command) draws frames" {
+            $options = & $module { param($a, $m, $d) Get-AnimationOptions $a $m $d } $animation $variant.Mode $variant.Defaults
+            $anim = & $module { param($a, $o) New-AnimationInstance $a $o } $animation $options
+            Test-Frames $anim 240 60
+        }
+    }
     $palettes = @($animation.Palettes)
     if ($palettes.Count -eq 0) { $palettes = @('') }
     foreach ($palette in $palettes) {

@@ -16,6 +16,9 @@
         @{ Name = 'Waves'; Type = 'int';    Default = 3; Help = 'How many waves' }
     )
 
+    # Optional: extra commands for the same animation with different defaults, e.g.
+    #   Variants = @( @{ Command = 'desktop-template-big'; Mode = 'desktop'; Description = 'Big waves'; Defaults = @{ Waves = 6 } } )
+
     # On the desktop: 'box' is a Cols x Rows window the user can place anywhere (several allowed);
     # 'sky' spans the screen width across the top (only one). Outline adds a dark edge for bright wallpapers.
     # Options here override the defaults above, for the desktop only.

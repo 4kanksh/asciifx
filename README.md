@@ -142,6 +142,7 @@ every half minute or so. Made to sit quietly above a dark or aurora wallpaper.
 ```powershell
 stars
 desktop-stars                       # across the top 40% of the screen
+desktop-stars-full                  # across the whole screen, evenly spread
 desktop-stars -Height 30 -Density 0.6
 desktop-stars -NoShootingStars
 ```
@@ -149,8 +150,12 @@ desktop-stars -NoShootingStars
 | Option | Default | What it does |
 |---|---|---|
 | `-Density` | 1 | How many stars: 0.5 is half as many, 2 is twice as many |
+| `-Fade` | 0.7 | How much the stars thin out toward the bottom: 0 spreads them evenly, 1 leaves none at the bottom |
 | `-Height` | 40 | How far down the screen the sky reaches, in percent (desktop only) |
 | `-NoShootingStars` | | Leave out the occasional shooting star |
+
+`desktop-stars-full` is `desktop-stars` with `-Height 100 -Fade 0`, and takes the same options.
+There is only ever one starry sky, so starting either one replaces the other.
 
 ### Terminal options for every animation
 
@@ -185,7 +190,7 @@ desktop-stars
 ```
 
 Running a command again for a spot that's already taken **replaces** what's there (handy for changing its size or color).
-`desktop-stars` covers the top of the screen, so there is only ever one sky.
+`desktop-stars` and `desktop-stars-full` cover the screen from the top, so there is only ever one sky.
 
 **Removing them:**
 

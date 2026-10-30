@@ -74,6 +74,15 @@ Tips:
   `'sky'` spans the screen width across the top, one at a time (like `stars`).
 - **`Desktop.Options`:** values used on the desktop instead of the defaults, e.g. `@{ Size = 90 }` to fill the window.
 - **`Outline`** draws a dark edge behind the characters, which helps on bright wallpapers. Leave it off for subtle animations.
+- **`Variants`** (optional) add extra commands for the same animation with other defaults; every option still works on them.
+  For example, stars has `desktop-stars-full`:
+  ```powershell
+  Variants = @(
+      @{ Command = 'desktop-stars-full'; Mode = 'desktop'; Description = 'A starry sky across the whole screen'
+         Defaults = @{ Height = 100; Fade = 0 } }
+  )
+  ```
+  Run `./tools/Update-Manifest.ps1` after adding one, so the new command loads automatically.
 
 ## 4. Check it and add it to the README
 

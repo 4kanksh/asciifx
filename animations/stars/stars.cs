@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AsciiFX.Animations
 {
-    // A quiet night sky: sparse stars that slowly twinkle, thinning toward the bottom,
+    // A quiet night sky: sparse stars that slowly twinkle, thinning toward the bottom (as much as Fade says),
     // with a faint shooting star now and then.
     public class Stars : IAnimation
     {
@@ -13,7 +13,7 @@ namespace AsciiFX.Animations
         // Catppuccin surface1, overlay0, subtext0 and text: dim enough to stay in the background
         static readonly int[] palette = { 0x45475a, 0x6c7086, 0xa6adc8, 0xcdd6f4 };
 
-        readonly double density;
+        readonly double density, fade;
         readonly bool shooting;
         readonly Random rng = new Random();
         readonly List<Star> stars = new List<Star>();
@@ -24,6 +24,7 @@ namespace AsciiFX.Animations
         public Stars(Options o)
         {
             density = Math.Max(0, o.Number("Density", 1));
+            fade = Math.Max(0, Math.Min(1, o.Number("Fade", 0.7)));
             shooting = !o.Flag("NoShootingStars");
             nextMeteor = 15 + rng.NextDouble() * 30;
         }
@@ -37,7 +38,7 @@ namespace AsciiFX.Animations
             stars.Clear();
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
-                    if (rng.NextDouble() < 0.018 * density * (1 - 0.7 * y / (double)h))
+                    if (rng.NextDouble() < 0.018 * density * (1 - fade * y / (double)h))
                     {
                         Star s = new Star();
                         s.X = x; s.Y = y;
