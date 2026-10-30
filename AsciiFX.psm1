@@ -57,8 +57,10 @@ function Initialize-AsciiFX([switch]$Desktop) {
     }
     if ($Desktop -and -not ('AsciiFX.DesktopPlayer' -as [type])) {
         Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+        # PowerShell 7 also needs the libraries Windows Forms builds on named explicitly
         $winForms = if ($PSVersionTable.PSEdition -eq 'Core') {
-            [System.Windows.Forms.Form], [System.Drawing.Graphics] | ForEach-Object { $_.Assembly.Location }
+            [System.Windows.Forms.Form], [System.Drawing.Graphics], [System.ComponentModel.Component] |
+                ForEach-Object { $_.Assembly.Location } | Select-Object -Unique
         } else { 'System.Windows.Forms', 'System.Drawing' }
         $references = @([AsciiFX.IAnimation].Assembly.Location) + $winForms
         $dll = Get-CompiledAssembly 'AsciiFX.Desktop' @(Join-Path $PSScriptRoot 'core/AsciiFX.Desktop.cs') $references
