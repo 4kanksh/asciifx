@@ -59,7 +59,7 @@ function Initialize-AsciiFX([switch]$Desktop) {
         Add-Type -AssemblyName System.Windows.Forms, System.Drawing
         # PowerShell 7 also needs the libraries Windows Forms builds on named explicitly
         $winForms = if ($PSVersionTable.PSEdition -eq 'Core') {
-            [System.Windows.Forms.Form], [System.Drawing.Graphics], [System.ComponentModel.Component] |
+            [System.Windows.Forms.Form], [System.Drawing.Graphics], [System.Drawing.Rectangle], [System.ComponentModel.Component] |
                 ForEach-Object { $_.Assembly.Location } | Select-Object -Unique
         } else { 'System.Windows.Forms', 'System.Drawing' }
         $references = @([AsciiFX.IAnimation].Assembly.Location) + $winForms
