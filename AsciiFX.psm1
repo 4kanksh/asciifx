@@ -4,11 +4,28 @@
 # This file reads those manifests and creates two commands for each animation:
 #   <name>          plays it full-screen in the terminal
 #   desktop-<name>  shows it on the desktop, above the wallpaper and behind your windows (Windows only)
+# Your own animations go in ~/.config/asciifx/animations, laid out the same way. A picture animation (made from a
+# GIF with tools/New-PictureAnimation.py) needs no C#: its manifest just names its .picture file.
 
+$script:UserAnimationsPath = Join-Path $HOME '.config/asciifx/animations'
 $script:Animations = [ordered]@{}
-foreach ($dir in Get-ChildItem (Join-Path $PSScriptRoot 'animations') -Directory | Where-Object Name -NotLike '_*' | Sort-Object Name) {
-    $manifest = Import-PowerShellDataFile (Join-Path $dir.FullName "$($dir.Name).psd1")
-    $script:Animations[$manifest.Name] = $manifest
+foreach ($root in (Join-Path $PSScriptRoot 'animations'), $script:UserAnimationsPath) {
+    if (-not (Test-Path $root)) { continue }
+    $user = $root -eq $script:UserAnimationsPath
+    foreach ($dir in Get-ChildItem $root -Directory | Where-Object Name -NotLike '_*' | Sort-Object Name) {
+        $file = Join-Path $dir.FullName "$($dir.Name).psd1"
+        if (-not (Test-Path $file)) { continue }
+        $manifest = Import-PowerShellDataFile $file
+        $manifest.User = $user
+        if ($manifest.Picture) {
+            $manifest.Class = 'AsciiFX.Animations.Picture'
+            $manifest.Settings = @{ File = Join-Path $dir.FullName $manifest.Picture }
+            if (-not $manifest.Options) {
+                $manifest.Options = @(@{ Name = 'Speed'; Type = 'double'; Default = 1; Help = 'Playback speed: 2 is twice as fast, 0.5 half as fast' })
+            }
+        }
+        $script:Animations[$manifest.Name] = $manifest
+    }
 }
 
 $script:Positions = 'center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'
@@ -49,8 +66,9 @@ function Get-CompiledAssembly([string]$Name, [string[]]$Sources, [string[]]$Refe
 
 function Initialize-AsciiFX([switch]$Desktop) {
     if (-not ('AsciiFX.IAnimation' -as [type])) {
-        $sources = @(Join-Path $PSScriptRoot 'core/AsciiFX.Core.cs') +
-            @(Get-ChildItem (Join-Path $PSScriptRoot 'animations') -Recurse -Filter *.cs |
+        $animationFolders = @(Join-Path $PSScriptRoot 'animations') + @($script:UserAnimationsPath | Where-Object { Test-Path $_ })
+        $sources = @((Join-Path $PSScriptRoot 'core/AsciiFX.Core.cs'), (Join-Path $PSScriptRoot 'core/AsciiFX.Picture.cs')) +
+            @(Get-ChildItem $animationFolders -Recurse -Filter *.cs |
                 Where-Object { $_.Directory.Name -notlike '_*' } | Sort-Object FullName | ForEach-Object FullName)
         $dll = Get-CompiledAssembly 'AsciiFX.Animations' $sources
         if (-not ('AsciiFX.IAnimation' -as [type])) { Add-Type -Path $dll }
@@ -81,6 +99,8 @@ function Get-AnimationOptions($Animation, [string]$Mode, [Collections.IDictionar
     foreach ($key in $Bound.Keys) {
         $options[$key] = if ($Bound[$key] -is [switch]) { $Bound[$key].IsPresent } else { $Bound[$key] }
     }
+    # Fixed settings from the manifest itself, like a picture's file
+    if ($Animation.Settings) { foreach ($key in $Animation.Settings.Keys) { $options[$key] = $Animation.Settings[$key] } }
     $options
 }
 
@@ -148,6 +168,7 @@ function Start-DesktopWindow([string]$Name, [string]$Encoded, [int]$FontSize, [s
     $animation = $script:Animations[$Name]
     $options = @{}
     foreach ($pair in $Encoded -split ';') { if ($pair -match '^(.+?)=(.*)$') { $options[$Matches[1]] = $Matches[2] } }
+    if ($animation.Settings) { foreach ($key in $animation.Settings.Keys) { $options[$key] = $animation.Settings[$key] } }
     $height = if ($options.Height) { [int]$options.Height } else { 40 }
     $d = $animation.Desktop
     [AsciiFX.DesktopPlayer]::Run((New-AnimationInstance $animation $options), $Name, $FontSize, $d.Layout,
@@ -220,13 +241,22 @@ function New-CommandText($Animation, [string]$Mode, $Variant) {
 }
 
 $script:Commands = foreach ($animation in $script:Animations.Values) {
-    foreach ($mode in 'terminal', 'desktop') {
-        . ([scriptblock]::Create((New-CommandText $animation $mode)))
-        if ($mode -eq 'desktop') { "desktop-$($animation.Name)" } else { $animation.Name }
-    }
-    foreach ($variant in $animation.Variants) {
-        . ([scriptblock]::Create((New-CommandText $animation $variant.Mode $variant)))
-        $variant.Command
+    $names = @(
+        foreach ($mode in 'terminal', 'desktop') {
+            . ([scriptblock]::Create((New-CommandText $animation $mode)))
+            if ($mode -eq 'desktop') { "desktop-$($animation.Name)" } else { $animation.Name }
+        }
+        foreach ($variant in $animation.Variants) {
+            . ([scriptblock]::Create((New-CommandText $animation $variant.Mode $variant)))
+            $variant.Command
+        }
+    )
+    if ($animation.User) {
+        # The manifest only exports the built-in commands, so your own animations' commands are made global
+        # directly. They still run inside the module, so they work just like the built-in ones.
+        foreach ($name in $names) { Set-Item "function:global:$name" (Get-Item "function:$name").ScriptBlock }
+    } else {
+        $names
     }
 }
 

@@ -1,6 +1,6 @@
 @{
     RootModule        = 'AsciiFX.psm1'
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.2.0'
     GUID              = '98ed09a5-be37-475e-9428-0ab396509e07'
     Author            = 'Akanksh Singh'
     Copyright         = '(c) 2026 Akanksh Singh. MIT License.'

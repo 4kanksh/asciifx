@@ -27,6 +27,14 @@ namespace AsciiFX
         void Frame(double t, char[] chars, int[] colors);
     }
 
+    // Optional extra for animations that also color each cell's background, like pictures drawn with half blocks
+    // ('▀' in the upper pixel's color over a background of the lower pixel's color). The players use this Frame
+    // instead when an animation has it. backgrounds holds palette indexes; -1 leaves the background clear.
+    public interface IBackgroundAnimation : IAnimation
+    {
+        void Frame(double t, char[] chars, int[] colors, int[] backgrounds);
+    }
+
     public static class Cell
     {
         // Terminal cells are about 2.2 times taller than they are wide; animations use this to keep circles round
@@ -127,19 +135,26 @@ namespace AsciiFX
             }
 
             string[] colorCodes = new string[anim.Palette.Length];
+            string[] backgroundCodes = new string[anim.Palette.Length];
             for (int i = 0; i < colorCodes.Length; i++)
             {
                 int c = anim.Palette[i];
-                colorCodes[i] = Esc + "[38;2;" + ((c >> 16) & 255) + ";" + ((c >> 8) & 255) + ";" + (c & 255) + "m";
+                string rgb = ((c >> 16) & 255) + ";" + ((c >> 8) & 255) + ";" + (c & 255) + "m";
+                colorCodes[i] = Esc + "[38;2;" + rgb;
+                backgroundCodes[i] = Esc + "[48;2;" + rgb;
             }
+            IBackgroundAnimation withBackgrounds = anim as IBackgroundAnimation;
 
             int frameMs = fps > 0 ? 1000 / fps : anim.FrameMs;
             Stream stdout = Console.OpenStandardOutput();
             StringBuilder sb = new StringBuilder();
             int w = -1, h = -1;
             char[] chars = null;
-            int[] colors = null;
+            int[] colors = null, backgrounds = null;
 
+            // Output is UTF-8 so pictures can use block characters like '▀'
+            Encoding oldEncoding = null;
+            try { oldEncoding = Console.OutputEncoding; Console.OutputEncoding = new UTF8Encoding(false); } catch (IOException) { }
             bool oldCtrlC = false;
             try { oldCtrlC = Console.TreatControlCAsInput; Console.TreatControlCAsInput = true; } catch (IOException) { }
             Write(stdout, Esc + "[?1049h" + Esc + "[?25l");  // alternate screen, hidden cursor
@@ -157,25 +172,38 @@ namespace AsciiFX
                         w = cw; h = ch;
                         chars = new char[w * h];
                         colors = new int[w * h];
+                        backgrounds = new int[w * h];
                         anim.Resize(w, h);
                         Write(stdout, Esc + "[2J");
                     }
 
-                    anim.Frame(t, chars, colors);
+                    if (withBackgrounds != null) withBackgrounds.Frame(t, chars, colors, backgrounds);
+                    else
+                    {
+                        anim.Frame(t, chars, colors);
+                        for (int k = 0; k < backgrounds.Length; k++) backgrounds[k] = -1;
+                    }
                     sb.Length = 0;
-                    string current = null;
+                    string current = null, currentBackground = null;
                     for (int y = 0; y < h; y++)
                     {
                         sb.Append(Esc).Append('[').Append(y + 1).Append(";1H");
                         for (int x = 0; x < w; x++)
                         {
                             int k = y * w + x;
+                            string background = backgrounds[k] < 0 ? null : backgroundCodes[backgrounds[k]];
+                            if (!ReferenceEquals(background, currentBackground))
+                            {
+                                sb.Append(background ?? Esc + "[49m");  // 49 = back to the terminal's own background
+                                currentBackground = background;
+                            }
                             if (colors[k] < 0) { sb.Append(' '); continue; }
                             string col = colorCodes[colors[k]];
                             if (!ReferenceEquals(col, current)) { sb.Append(col); current = col; }
                             sb.Append(chars[k]);
                         }
                     }
+                    if (currentBackground != null) sb.Append(Esc).Append("[49m");
                     Write(stdout, sb.ToString());
 
                     int wait = (int)(frameMs - (clock.Elapsed.TotalSeconds - t) * 1000);
@@ -186,6 +214,7 @@ namespace AsciiFX
             {
                 Write(stdout, Esc + "[0m" + Esc + "[?25h" + Esc + "[?1049l");
                 try { Console.TreatControlCAsInput = oldCtrlC; } catch (IOException) { }
+                try { if (oldEncoding != null) Console.OutputEncoding = oldEncoding; } catch (IOException) { }
             }
         }
 
@@ -202,7 +231,7 @@ namespace AsciiFX
 
         static void Write(Stream stream, string text)
         {
-            byte[] bytes = Encoding.ASCII.GetBytes(text);
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
             stream.Write(bytes, 0, bytes.Length);
             stream.Flush();
         }

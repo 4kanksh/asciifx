@@ -23,12 +23,14 @@ namespace AsciiFX
         const int MaxBrushes = 8;  // nearby colors share a brush, so each row needs only a few text draws
 
         readonly IAnimation anim;
+        readonly IBackgroundAnimation withBackgrounds;
         readonly int cols, rows;
         readonly char[] chars;
-        readonly int[] colors;
+        readonly int[] colors, backgrounds;
         readonly char[] line;
         readonly int[] group;          // palette index -> brush
         readonly SolidBrush[] brushes;
+        readonly SolidBrush[] exact;   // palette index -> its exact color, for filled blocks and backgrounds
         readonly SolidBrush outlineBrush;
         readonly bool outline;
         readonly Font font;
@@ -69,8 +71,10 @@ namespace AsciiFX
         {
             this.anim = anim; this.font = font; this.cellW = cellW; this.cellH = cellH;
             this.cols = Math.Max(1, cols); this.rows = Math.Max(1, rows); this.outline = outline;
+            withBackgrounds = anim as IBackgroundAnimation;
             chars = new char[this.cols * this.rows];
             colors = new int[this.cols * this.rows];
+            backgrounds = new int[this.cols * this.rows];
             line = new char[this.cols];
             anim.Resize(this.cols, this.rows);
 
@@ -83,6 +87,9 @@ namespace AsciiFX
             DoubleBuffered = true;
 
             group = GroupColors(anim.Palette, out brushes);
+            exact = new SolidBrush[anim.Palette.Length];
+            for (int i = 0; i < exact.Length; i++)
+                exact[i] = new SolidBrush(Color.FromArgb((anim.Palette[i] >> 16) & 255, (anim.Palette[i] >> 8) & 255, anim.Palette[i] & 255));
             outlineBrush = new SolidBrush(Color.FromArgb(17, 17, 27));
 
             ClientSize = new Size((int)(this.cols * cellW) + 4, (int)(this.rows * cellH) + 4);
@@ -158,7 +165,12 @@ namespace AsciiFX
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            anim.Frame(clock.Elapsed.TotalSeconds, chars, colors);
+            if (withBackgrounds != null) withBackgrounds.Frame(clock.Elapsed.TotalSeconds, chars, colors, backgrounds);
+            else
+            {
+                anim.Frame(clock.Elapsed.TotalSeconds, chars, colors);
+                for (int k = 0; k < backgrounds.Length; k++) backgrounds[k] = -1;
+            }
             Graphics g = e.Graphics;
             g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;  // no antialiasing, so no colored fringes
 
@@ -166,6 +178,7 @@ namespace AsciiFX
             {
                 float top = 2 + y * cellH;
                 int row = y * cols;
+                FillBlocks(g, y);
                 for (int x = 0; x < cols; x++) line[x] = colors[row + x] < 0 ? ' ' : chars[row + x];
 
                 // A dark copy offset by a pixel keeps the characters readable on bright wallpapers
@@ -182,6 +195,28 @@ namespace AsciiFX
                                      2 + start * cellW, top, StringFormat.GenericTypographic);
                     start = end;
                 }
+            }
+        }
+
+        // Backgrounds, and the block characters '▀' '▄' '█', are painted as exact rectangles rather than text, so
+        // pictures come out crisp in any font. Those cells are then cleared so the text pass skips them.
+        void FillBlocks(Graphics g, int y)
+        {
+            int row = y * cols;
+            int top = (int)(2 + y * cellH), middle = (int)(2 + (y + 0.5f) * cellH), bottom = (int)(2 + (y + 1) * cellH);
+            for (int x = 0; x < cols; x++)
+            {
+                int k = row + x;
+                char c = chars[k];
+                bool upper = c == '▀' || c == '█', lower = c == '▄' || c == '█';
+                if (backgrounds[k] < 0 && !(colors[k] >= 0 && (upper || lower))) continue;
+
+                int left = (int)(2 + x * cellW), right = (int)(2 + (x + 1) * cellW);
+                int topColor = colors[k] >= 0 && upper ? colors[k] : backgrounds[k];
+                int bottomColor = colors[k] >= 0 && lower ? colors[k] : backgrounds[k];
+                if (topColor >= 0) g.FillRectangle(exact[topColor], left, top, right - left, middle - top);
+                if (bottomColor >= 0) g.FillRectangle(exact[bottomColor], left, middle, right - left, bottom - middle);
+                if (upper || lower) colors[k] = -1;  // fully painted already
             }
         }
 

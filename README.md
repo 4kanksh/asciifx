@@ -237,10 +237,30 @@ Use a terminal with true color support, like Windows Terminal. The old console w
 
 ---
 
+## Turn any GIF into an animation
+
+Got a GIF, an animated WebP or a picture you like? Turn it into your own AsciiFX animation, with both commands:
+
+```powershell
+python tools/New-PictureAnimation.py mycat.gif cat --description "My cat"
+# then, in a new PowerShell window:
+cat                              # full-screen in the terminal, scaled up to fit
+desktop-cat -Position top-right  # on the desktop, like any other
+```
+
+It's drawn with half-block characters (two pixels per character), so pixel art looks crisp. White and
+transparent backgrounds become see-through. Use `--width` to choose its size in characters (default 36).
+
+Your animations are saved in `~\.config\asciifx\animations\<name>`, outside the module, so updates never touch them.
+They only exist on your PC, so keep anything that isn't yours to share there. The converter needs Python with
+Pillow (`pip install pillow`). Your own animations load when AsciiFX does, so if their commands aren't found in a
+new window, add `Import-Module AsciiFX` to your PowerShell profile.
+
 ## Adding your own animation
 
 Each animation is one small folder: a C# class that draws a frame, plus a short settings file. Everything else
 (both commands, the options, tab completion, help, desktop mode) is created from it automatically.
+Put it in `animations/` to contribute it, or in `~\.config\asciifx\animations` to keep it to yourself.
 
 ```powershell
 ./tools/New-Animation.ps1 -Name rain   # copies the template to animations/rain/
@@ -251,7 +271,8 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full walkthrough.
 ## How it works
 
 - `animations/<name>/` holds a class implementing `IAnimation` (`Resize` and `Frame`: which character and color go in
-  each cell at time *t*) and a `.psd1` manifest with its description, palettes and options.
+  each cell at time *t*) and a `.psd1` manifest with its description, palettes and options. Animations can also
+  color each cell's background (`IBackgroundAnimation`), which is how pictures (`core/AsciiFX.Picture.cs`) are drawn.
 - `AsciiFX.psm1` reads the manifests and generates the `<name>` and `desktop-<name>` commands from them.
 - `core/AsciiFX.Core.cs` has the terminal player (full-screen with escape codes); `core/AsciiFX.Desktop.cs` has the
   desktop player: a borderless, click-through window with a see-through background, kept just above the desktop layer.

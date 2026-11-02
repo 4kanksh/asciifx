@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 — 2026-11-02
+
+- **Picture animations**: `tools/New-PictureAnimation.py` turns a GIF, animated WebP or picture into an animation
+  with its own `<name>` and `desktop-<name>` commands, drawn in crisp half blocks and scaled to fit
+- **Your own animations folder**: AsciiFX also loads animations from `~/.config/asciifx/animations`
+- Animations can now color each cell's background (`IBackgroundAnimation`); both players support it, and the
+  desktop draws block characters as exact rectangles
+- The terminal player writes UTF-8, so animations can use characters beyond plain ASCII
+
 ## 1.1.0 — 2026-10-31
 
 - **`desktop-stars-full`**: a starry sky across the whole screen, evenly spread

@@ -21,13 +21,18 @@ function Test-Frames($Anim, [int]$Cols, [int]$Rows) {
     $Anim.Resize($Cols, $Rows)
     $chars = New-Object char[] ($Cols * $Rows)
     $colors = New-Object int[] ($Cols * $Rows)
+    $backgrounds = New-Object int[] ($Cols * $Rows)
+    $withBackgrounds = $Anim -is [AsciiFX.IBackgroundAnimation]
     $drawn = 0
     foreach ($t in 0, 0.4, 1.3, 2.7, 5.0) {
-        $Anim.Frame($t, $chars, $colors)
+        if ($withBackgrounds) { $Anim.Frame($t, $chars, $colors, $backgrounds) } else { $Anim.Frame($t, $chars, $colors) }
         for ($k = 0; $k -lt $colors.Length; $k++) {
             if ($colors[$k] -lt -1 -or $colors[$k] -ge $Anim.Palette.Length) { throw "color index $($colors[$k]) out of range at t=$t" }
+            if ($withBackgrounds -and ($backgrounds[$k] -lt -1 -or $backgrounds[$k] -ge $Anim.Palette.Length)) { throw "background index $($backgrounds[$k]) out of range at t=$t" }
             if ($colors[$k] -ge 0) {
-                if ([int]$chars[$k] -lt 32 -or [int]$chars[$k] -gt 126) { throw "non-printable character at t=$t" }
+                # Plain ASCII, plus the block characters pictures are drawn with
+                $code = [int]$chars[$k]
+                if (($code -lt 32 -or $code -gt 126) -and $code -notin 0x2580, 0x2584, 0x2588) { throw "unexpected character $code at t=$t" }
                 $drawn++
             }
         }
@@ -93,6 +98,20 @@ foreach ($name in & $module { $script:Animations.Keys }) {
         $anim = & $module { param($a, $o) New-AnimationInstance $a $o } $animation $options
         if ($animation.Desktop.Layout -eq 'sky') { Test-Frames $anim 240 28 } else { Test-Frames $anim $animation.Desktop.Cols $animation.Desktop.Rows }
     }
+}
+
+Test-Case 'picture animations play from a .picture file' {
+    $file = Join-Path ([IO.Path]::GetTempPath()) 'asciifx-test.picture'
+    # Two 4x4 frames: a red square with a see-through middle, then a full blue one
+    $lines = @('asciifx-picture 1', '4 4 2 100',
+        'ff0000 ff0000 ff0000 ff0000', 'ff0000 . . ff0000', 'ff0000 . . ff0000', 'ff0000 ff0000 ff0000 ff0000') +
+        @(1..4 | ForEach-Object { '0000ff 0000ff 0000ff 0000ff' })
+    [IO.File]::WriteAllLines($file, $lines)
+    try {
+        $anim = New-Object AsciiFX.Animations.Picture (New-Object AsciiFX.Options (@{ File = $file }))
+        Test-Frames $anim 40 12
+        $anim.Palette.Count -eq 2
+    } finally { Remove-Item $file }
 }
 
 Test-Case 'the template for new animations compiles and draws' {

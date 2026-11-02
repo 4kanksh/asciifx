@@ -11,6 +11,11 @@ animations/rain/
 From those, AsciiFX creates the `rain` and `desktop-rain` commands, their options, tab completion and
 `Get-Help` text, and runs it in both the terminal and on the desktop. No other file needs editing.
 
+**From a GIF instead?** For a picture, skip the C#: `python tools/New-PictureAnimation.py <image> <name>` writes a
+`.picture` file of pixels and a manifest whose `Picture = '<name>.picture'` line makes AsciiFX play it with the
+built-in picture player. It saves to `~/.config/asciifx/animations` by default; use `--out animations/<name>` to put
+it in the repository instead (only for pictures you have the right to share).
+
 ## 1. Create it from the template
 
 From the repository folder:
