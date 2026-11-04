@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **fuji-dawn-lake**: a snow-capped volcano at dawn over a mirror lake, with drifting mist, cranes, a boat poling
+  across, ripples and reeds. Ported from ASCII Magic's open-source library (MIT); see its folder's LICENSE
+- Fixed `tools/Update-Manifest.ps1` adding an empty entry to the export list for animations without variants
+
 ## 1.2.0 — 2026-11-02
 
 - **Picture animations**: `tools/New-PictureAnimation.py` turns a GIF, animated WebP or picture into an animation

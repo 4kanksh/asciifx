@@ -13,7 +13,8 @@ $names = $animations | ForEach-Object Name
 
 # One line per animation: its two commands, then any variant commands
 $lines = @("        'asciifx', 'desktop-clear'") + @($animations | ForEach-Object {
-    $commands = @($_.Name, "desktop-$($_.Name)") + @($_.Variants | ForEach-Object Command)
+    # (Where-Object drops the $null a manifest without Variants would otherwise add)
+    $commands = @($_.Name, "desktop-$($_.Name)") + @($_.Variants | Where-Object { $_ } | ForEach-Object Command)
     '        ' + (($commands | ForEach-Object { "'$_'" }) -join ', ')
 })
 $block = "FunctionsToExport = @(`n" + ($lines -join ",`n") + "`n    )"

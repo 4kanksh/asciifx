@@ -11,9 +11,10 @@
     # tools/Update-Manifest.ps1 regenerates this list from the animations/ folder.
     FunctionsToExport = @(
         'asciifx', 'desktop-clear',
-        'donut', 'desktop-donut', '',
-        'fire', 'desktop-fire', '',
-        'galaxy', 'desktop-galaxy', '',
+        'donut', 'desktop-donut',
+        'fire', 'desktop-fire',
+        'fuji-dawn-lake', 'desktop-fuji-dawn-lake',
+        'galaxy', 'desktop-galaxy',
         'stars', 'desktop-stars', 'desktop-stars-full'
     )
     CmdletsToExport   = @()
