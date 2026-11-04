@@ -1,9 +1,12 @@
 # AsciiFX
 
 **ASCII animations for your terminal and your Windows desktop.**
-A wall of fire, a rotating galaxy, a spinning 3D donut and a quiet starry sky. Play them full-screen in the
-terminal, or leave them running on the desktop, above your wallpaper and behind your windows.
+A wall of fire, a rotating galaxy, a spinning 3D donut, a quiet starry sky and Mount Fuji at dawn. Play them
+full-screen in the terminal, or leave them running on the desktop, above your wallpaper and behind your windows.
 
+<p align="center">
+  <img src="docs/previews/fuji-dawn-lake.gif" alt="Mount Fuji at dawn over a mirror lake" width="808" />
+</p>
 <p align="center">
   <img src="docs/previews/donut.svg" alt="Spinning 3D donut" width="400" />
   <img src="docs/previews/galaxy.svg" alt="Rotating galaxy" width="400" />
@@ -157,6 +160,28 @@ desktop-stars -NoShootingStars
 `desktop-stars-full` is `desktop-stars` with `-Height 100 -Fade 0`, and takes the same options.
 There is only ever one starry sky, so starting either one replaces the other.
 
+### 🗻 fuji-dawn-lake
+
+A snow-capped volcano glowing pink at dawn over a mirror lake. Mist drifts along its foot, cranes fly past, a small
+boat poles across, and ripples and reeds move in the breeze. It's drawn in half blocks (two pixels per character)
+and scales to fill your terminal.
+
+<p align="center"><img src="docs/previews/fuji-dawn-lake.gif" alt="Fuji Dawn Lake" width="576" /></p>
+
+```powershell
+fuji-dawn-lake
+fuji-dawn-lake -Speed 2                         # twice as fast
+desktop-fuji-dawn-lake -Position bottom-right   # a landscape window on your desktop
+desktop-fuji-dawn-lake -Size 16                 # bigger
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `-Speed` | 1 | Playback speed: 2 is twice as fast, 0.5 half as fast |
+
+From [ASCII Magic](https://www.ascii-magic.com/ascii/fuji-dawn-lake)'s open-source library, ported to AsciiFX
+(MIT licence, see [its LICENSE](animations/fuji-dawn-lake/LICENSE)).
+
 ### Terminal options for every animation
 
 | Option | Default | What it does |
@@ -283,6 +308,8 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full walkthrough.
 
 - The spinning donut follows the classic idea behind Andy Sloane's [donut.c](https://www.a1k0n.net/2011/07/20/donut-math.html).
 - Inspired by the animations on [asciiart.eu](https://www.asciiart.eu/animations).
+- `fuji-dawn-lake` is ported from the [ASCII Magic](https://www.ascii-magic.com) library
+  ([ascii-magic-art](https://github.com/kailashsr38/ascii-magic-art)), © 2026 ASCII Magic, MIT licence.
 - Colors from [Catppuccin](https://catppuccin.com).
 
 ## License
